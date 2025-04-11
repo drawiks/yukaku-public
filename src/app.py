@@ -1,9 +1,7 @@
 
 from datetime import datetime
 from playwright.async_api import async_playwright
-import asyncio
-import json
-import os
+import asyncio, json, os
 
 from utils.speaker import *
 from data.shedule import *
@@ -11,9 +9,6 @@ from data.shedule import *
 from config import EMAIL, PASSWORD, SESSION_FILE
 
 class App:
-    def __init__(self):
-        pass
-    
     async def main_loop(self):
         while True:
             now = datetime.now()
