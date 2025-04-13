@@ -22,7 +22,10 @@ yukaku-public использует библиотеку [edge-tts](https://githu
 2. установи зависимости:
 - pip install -r requirements.txt
 
-3. создай файл `.env` и добавь свои данные (например, логин и пароль для Google):
+3. создай расписание по шаблону:
+- [src/data/shedule.py](SHEDULE)
+
+4. создай файл `.env` и добавь свои данные (например, логин и пароль для Google):
 - EMAIL=ваша_почта, PASSWORD=ваш_пароль, SESSION_FILE=путь/session.json
 
 ## лицензия
