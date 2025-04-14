@@ -19,13 +19,16 @@ yukaku-public использует библиотеку [edge-tts](https://githu
 1. клонируй репозиторий:
 - git clone https://github.com/drawiks/yukaku-public.git
 
-2. установи зависимости:
+2. создай виртуальную среду
+- python -m venv myenv
+
+3. установи зависимости:
 - pip install -r requirements.txt
 
-3. создай расписание по шаблону:
+4. создай расписание по шаблону:
 - [src/data/shedule.py](src/data/shedule.py)
 
-4. создай файл `.env` и добавь свои данные (например, логин и пароль для Google):
+5. создай файл `.env` и добавь свои данные (например, логин и пароль для Google):
 - EMAIL=ваша_почта, PASSWORD=ваш_пароль, SESSION_FILE=путь/session.json
 
 ## лицензия
