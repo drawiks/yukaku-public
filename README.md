@@ -19,7 +19,7 @@ yukaku-public использует библиотеку [edge-tts](https://githu
 1. клонируй репозиторий:
 - git clone https://github.com/drawiks/yukaku-public.git
 
-2. создай виртуальную среду
+2. создай виртуальную среду:
 - python -m venv venv
 
 3. установи зависимости:
