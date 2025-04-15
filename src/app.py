@@ -4,11 +4,15 @@ from playwright.async_api import async_playwright
 import asyncio, json, os
 
 from utils.speaker import *
+from utils.logger import *
 from data.shedule import *
 
-from config import EMAIL, PASSWORD, SESSION_FILE
+from config import EMAIL, PASSWORD, SESSION_FILE, LOG_PATH
 
 class App:
+    def __init__(self):
+        self.log = LogManager(LOG_PATH).logger
+    
     async def main_loop(self):
         while True:
             now = datetime.now()
@@ -16,15 +20,12 @@ class App:
             current_day = now.strftime("%A")
 
             lesson_id = shedule.get(current_day, {}).get(current_time)
-
-            print(current_time)
             
             if lesson_id:
                 lesson_name = next((name for name, id_ in lessons.items() if id_ == lesson_id), "неизвестный урок")
                 url = f"https://meet.google.com/{lesson_id}?pli=1&authuser=2"
 
-                print(f"({current_time} {current_day}) — ({lesson_name} ID: {lesson_id})")
-                print(f"открываю meet: ({url})")
+                self.log.info(f"({current_day} {current_time}) — {lesson_name} ID: {lesson_id}")
 
                 await speak(lesson_name)
                 task = asyncio.create_task(self.join_google_meet(url))

@@ -7,3 +7,5 @@ env.read_env()
 EMAIL = env.str("EMAIL")
 PASSWORD = env.str("PASSWORD")
 SESSION_FILE = env.str("SESSION_FILE")
+
+LOG_PATH = env.str("LOG_PATH")
