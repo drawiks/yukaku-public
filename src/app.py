@@ -47,7 +47,7 @@ class App:
             await page.goto("https://accounts.google.com")
             
             if not await page.is_visible("input[type='email']"):
-                print("cессия активна, пропускаем вход.")
+                self.log.info("cессия активна, пропускаем вход.")
             else:
                 """ВХОДИМ В АККАУНТ"""
                 await page.fill("input[type='email']", EMAIL)
