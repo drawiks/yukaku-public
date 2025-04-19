@@ -1,90 +1,30 @@
 
-from datetime import datetime
-from playwright.async_api import async_playwright
-import asyncio, json, os
+import flet as ft
+import asyncio
 
-from utils.speaker import *
-from utils.logger import *
-from data.shedule import *
+from gui.engine import Engine
+
+from core.service.loop import Loop
+
+from core.utils.logger import LogManager
 
 from config import EMAIL, PASSWORD, SESSION_FILE, LOG_PATH
 
 class App:
     def __init__(self):
         self.log = LogManager(LOG_PATH).logger
-    
-    async def main_loop(self):
-        while True:
-            now = datetime.now()
-            current_time = now.strftime("%H:%M")
-            current_day = now.strftime("%A")
-
-            lesson_id = shedule.get(current_day, {}).get(current_time)
-            
-            if lesson_id:
-                lesson_name = next((name for name, id_ in lessons.items() if id_ == lesson_id), "неизвестный урок")
-                url = f"https://meet.google.com/{lesson_id}?pli=1&authuser=2"
-
-                self.log.info(f"({current_day} {current_time}) — {lesson_name} ID: {lesson_id}")
-
-                await speak(lesson_name)
-                task = asyncio.create_task(self.join_google_meet(url))
-                await task
-                
-                await asyncio.sleep(60)
-            else:
-                await asyncio.sleep(15)
-    
-    async def join_google_meet(self, url):
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
-            context = await browser.new_context()
-
-            await self.load_session(context)
-            
-            page = await context.new_page()
-            
-            await page.goto("https://accounts.google.com")
-            
-            if not await page.is_visible("input[type='email']"):
-                print("cессия активна, пропускаем вход.")
-            else:
-                """ВХОДИМ В АККАУНТ"""
-                await page.fill("input[type='email']", EMAIL)
-                await page.click("button:has-text('Далее')")
-                await page.wait_for_timeout(2000)
-
-                await page.fill("input[type='password']", PASSWORD)
-                await page.click("button:has-text('Далее')")
-                await page.wait_for_timeout(5000)
-
-            """ВХОДИМ НА КОНФЕРЕНЦИЮ"""
-            await page.goto(url)
-            await page.wait_for_selector("button:has-text('Не надавати доступ до мікрофона й камери')")
-            await page.click("button:has-text('Не надавати доступ до мікрофона й камери')")
-            await page.wait_for_timeout(2000)
-            await page.wait_for_selector("button:has-text('Приєднатися зараз')")
-            await page.click("button:has-text('Приєднатися зараз')")
-
-            await asyncio.sleep(1500)
-
-            await self.save_session(context)
-            await browser.close()
-    
-    async def save_session(self, context):
-        cookies = await context.cookies()
-        with open(SESSION_FILE, 'w') as f:
-            json.dump(cookies, f)
-
-    async def load_session(self, context):
-        if os.path.exists(SESSION_FILE):
-            with open(SESSION_FILE, 'r') as f:
-                cookies = json.load(f)
-                await context.add_cookies(cookies)
+        self.loop = Loop()
+        
+        self.tasks = []
         
     async def start(self):
-        task = asyncio.create_task(self.main_loop())
-        await task
+        loop_task = asyncio.create_task(self.loop.main_loop())
+        engine_task = asyncio.create_task(ft.app_async(target=Engine, assets_dir="gui/assets"))
+        
+        self.tasks.append(loop_task)
+        self.tasks.append(engine_task)
+        
+        await asyncio.gather(*self.tasks)
 
 if __name__ == "__main__":
     app = App()
