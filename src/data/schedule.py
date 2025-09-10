@@ -8,7 +8,7 @@ lessons = {
 }
 
 #используйте дни недели в формате Monday, Tuesday...
-shedule = {
+schedule = {
     "Friday":{
             "09:55":lessons["meet1"],
             "12:00":lessons["meet3"],

@@ -3,73 +3,81 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 import asyncio, json, os
 
-from utils.speaker import *
-from utils.logger import *
-from data.shedule import *
+from .utils import LogManager, speak
+from .data import schedule, lessons
 
-from config import EMAIL, PASSWORD, SESSION_FILE, LOG_PATH
+from .config import EMAIL, PASSWORD, SESSION_FILE, LOG_PATH
 
 class App:
     def __init__(self):
         self.log = LogManager(LOG_PATH).logger
     
+    async def join_google_meet(self, url):
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=False)
+                context = await browser.new_context()
+
+                await self.load_session(context)
+                
+                page = await context.new_page()
+                
+                await page.goto("https://accounts.google.com")
+                
+                if not await page.is_visible("input[type='email']"):
+                    self.log.info("cессия активна, пропускаем вход.")
+                else:
+                    await self.login(page)
+                
+                await page.goto(url)
+                await page.wait_for_selector("button:has-text('Не надавати доступ до мікрофона й камери')")
+                await page.click("button:has-text('Не надавати доступ до мікрофона й камери')")
+                await page.wait_for_timeout(2000)
+                await page.wait_for_selector("button:has-text('Приєднатися зараз')")
+                await page.click("button:has-text('Приєднатися зараз')")
+                
+                await asyncio.sleep(1500)
+                
+                await self.save_session(context)
+        except Exception as e:
+            self.log.error(f"error: {e}")
+        finally:
+            if browser:
+                await browser.close()
+    
     async def main_loop(self):
         while True:
-            now = datetime.now()
-            current_time = now.strftime("%H:%M")
-            current_day = now.strftime("%A")
+            try:
+                now = datetime.now()
+                current_time = now.strftime("%H:%M")
+                current_day = now.strftime("%A")
 
-            lesson_id = shedule.get(current_day, {}).get(current_time)
-            
-            if lesson_id:
-                lesson_name = next((name for name, id_ in lessons.items() if id_ == lesson_id), "неизвестный урок")
-                url = f"https://meet.google.com/{lesson_id}?pli=1&authuser=2"
-
-                self.log.info(f"({current_day} {current_time}) — {lesson_name} ID: {lesson_id}")
-
-                await speak(lesson_name)
-                task = asyncio.create_task(self.join_google_meet(url))
-                await task
+                lesson_id = schedule.get(current_day, {}).get(current_time)
                 
-                await asyncio.sleep(60)
-            else:
-                await asyncio.sleep(15)
+                if lesson_id:
+                    lesson_name = next((name for name, id_ in lessons.items() if id_ == lesson_id), "неизвестный урок")
+                    url = f"https://meet.google.com/{lesson_id}"
+
+                    self.log.info(f"({current_day} {current_time}) — {lesson_name} ID: {lesson_id}")
+
+                    await speak(lesson_name)
+                    task = asyncio.create_task(self.join_google_meet(url))
+                    await task
+                    
+                    await asyncio.sleep(60)
+                else:
+                    await asyncio.sleep(15)
+            except Exception as e:
+                self.log.error(f"error: {e}")
     
-    async def join_google_meet(self, url):
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
-            context = await browser.new_context()
-
-            await self.load_session(context)
-            
-            page = await context.new_page()
-            
-            await page.goto("https://accounts.google.com")
-            
-            if not await page.is_visible("input[type='email']"):
-                self.log.info("cессия активна, пропускаем вход.")
-            else:
-                """ВХОДИМ В АККАУНТ"""
-                await page.fill("input[type='email']", EMAIL)
-                await page.click("button:has-text('Далее')")
-                await page.wait_for_timeout(2000)
-
-                await page.fill("input[type='password']", PASSWORD)
-                await page.click("button:has-text('Далее')")
-                await page.wait_for_timeout(5000)
-
-            """ВХОДИМ НА КОНФЕРЕНЦИЮ"""
-            await page.goto(url)
-            await page.wait_for_selector("button:has-text('Не надавати доступ до мікрофона й камери')")
-            await page.click("button:has-text('Не надавати доступ до мікрофона й камери')")
-            await page.wait_for_timeout(2000)
-            await page.wait_for_selector("button:has-text('Приєднатися зараз')")
-            await page.click("button:has-text('Приєднатися зараз')")
-
-            await asyncio.sleep(1500)
-
-            await self.save_session(context)
-            await browser.close()
+    async def login(self, page):
+        await page.fill("input[type='email']", EMAIL)
+        await page.click("button:has-text('Далее')")
+        await page.wait_for_timeout(2000)
+        
+        await page.fill("input[type='password']", PASSWORD)
+        await page.click("button:has-text('Далее')")
+        await page.wait_for_timeout(5000)
     
     async def save_session(self, context):
         cookies = await context.cookies()
@@ -85,7 +93,3 @@ class App:
     async def start(self):
         task = asyncio.create_task(self.main_loop())
         await task
-
-if __name__ == "__main__":
-    app = App()
-    asyncio.run(app.start())
